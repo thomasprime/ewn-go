@@ -3,6 +3,7 @@ package ewn
 import (
 	"fmt"
 	"github.com/go-gomail/gomail"
+	"math/rand"
 	"github.com/spf13/viper"
 	"gopkg.in/Graylog2/go-gelf.v2/gelf"
 	"os"
@@ -40,6 +41,7 @@ func isFailed(msg *Message) bool {
 func sendEmail(msg *Message, cfg *viper.Viper) error {
 	if cfg.GetBool("email.enabled") && isFailed(msg) {
 		recipients := map[string][]string{"To": cfg.GetStringSlice("email.recipients")}
+		uniqueID := fmt.Sprintf("%d.%d", time.Now().UnixNano(), rand.Int63())
 		var messageFull string
 		var sender *gomail.Dialer
 		conn, err2 := connStrToStruct(cfg.GetString("email.host"))
@@ -61,6 +63,7 @@ func sendEmail(msg *Message, cfg *viper.Viper) error {
 		} else {
 			eMessage.SetHeader("From", cfg.GetString("email.from"))
 		}
+		eMessage.SetHeader("Message-ID", fmt.Sprintf("<%s@%s>", uniqueID, msg.Host))
 		eMessage.SetHeaders(recipients)
 		eMessage.SetHeader("Subject", fmt.Sprintf("ewn@%s FAILED: %s", msg.Host, msg.Args.Command))
 		if msg.GeneralError != nil {
